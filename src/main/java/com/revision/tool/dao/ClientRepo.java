@@ -13,4 +13,6 @@ import java.util.Optional;
 public interface ClientRepo extends JpaRepository<Client, Integer> {
     Client findByName(String name);
     Optional<Client> findById(int id);
+
+    Optional<Client> findByGoogleId(String googleId);
 }

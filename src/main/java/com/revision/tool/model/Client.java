@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Optional;
+
 @Data
 @Entity
 @Table(name = "client")
@@ -19,7 +21,15 @@ public class Client {
 
     private String password;
 
+    private String googleId;
+
+    private String email;
+
+
+
     public Client orElse(Object o) {
         return (Client)o;
     }
+
+
 }
