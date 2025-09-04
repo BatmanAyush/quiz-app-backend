@@ -23,6 +23,8 @@ public class Quiz {
     @JoinColumn(name = "owner_id") // Specifies the foreign key column name
     private Client owner;
 
+    private String difficulty;
+
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<QuizQuestion> questions;
 

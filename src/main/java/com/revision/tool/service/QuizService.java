@@ -54,4 +54,9 @@ public class QuizService {
         }
         return true;
     }
+
+    public boolean handleDelete(Long quizId, UserPrinciple currentUser) {
+        repo.deleteById(quizId);
+        return true;
+    }
 }

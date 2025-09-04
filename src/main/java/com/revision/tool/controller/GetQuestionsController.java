@@ -38,5 +38,6 @@ public class GetQuestionsController {
     public static class QuizTitleDTO {
         private Long id;
         private String title;
+        private String difficulty;
     }
 }

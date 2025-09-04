@@ -25,7 +25,7 @@ public class GetQuizService {
 
         // Use a stream to map each Quiz entity to a QuizTitleDTO
         return quizzes.stream()
-                .map(quiz -> new GetQuestionsController.QuizTitleDTO(quiz.getId(), quiz.getTitle()))
+                .map(quiz -> new GetQuestionsController.QuizTitleDTO(quiz.getId(), quiz.getTitle(),quiz.getDifficulty()))
                 .collect(Collectors.toList());
     }
 
@@ -36,6 +36,7 @@ public class GetQuizService {
        Optional<Quiz> quiz = repo.findById(quizId);
        List<QuizQuestion> quizQuestions = quiz.get().getQuestions();
        List<QuizController.UserFinalQuestions>userFinalQuestionsList = new ArrayList<>();
+
        for(int i = 0;i<quizQuestions.size();i++){
            QuizController.UserFinalQuestions userQuestions = new QuizController.UserFinalQuestions();
            userQuestions.setQuestionText(quizQuestions.get(i).getQuestionText());

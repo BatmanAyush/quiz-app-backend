@@ -23,7 +23,8 @@ public class SecurityConfig {
     @Bean @Order(1)
     public SecurityFilterChain oauthChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/login/**","/oauth2/**","/api/auth/**")
+                .securityMatcher("/login/oauth2/**","/oauth2/**","/api/auth/**")
+                .cors(c -> {}) // keep
                 .authorizeHttpRequests(a -> a.anyRequest().permitAll())
                 .oauth2Login(o -> o.defaultSuccessUrl("/api/auth/oauth-success", true));
         // CSRF yahan stateful flows ke liye theek rahega

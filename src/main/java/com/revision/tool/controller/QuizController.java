@@ -30,6 +30,10 @@ public class QuizController {
         return quizService.saveQuestion(quizId,quizQuestions,currentUser);
     }
 
+    @PostMapping("/{quizId}/delete")
+    public boolean questionDelete(@PathVariable Long quizId,@AuthenticationPrincipal UserPrinciple currentUser){
+            return quizService.handleDelete(quizId,currentUser);
+    }
     @Data
     public static class CreateQuizRequest{
         private String title;
