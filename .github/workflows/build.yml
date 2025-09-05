@@ -10,7 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # Runner-local Postgres the tests will use
     services:
       postgres:
         image: postgres:16
@@ -27,20 +26,12 @@ jobs:
           --health-retries=20
 
     env:
-      # App talks to the runner's DB, not your laptop
       SPRING_PROFILES_ACTIVE: ci
       SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
       SPRING_DATASOURCE_USERNAME: test
       SPRING_DATASOURCE_PASSWORD: test
-
-      # Your OAuth secrets (fine to pass if beans expect them)
       CLIENT_ID: ${{ secrets.CLI_ID }}
       CLIENT_SECRET: ${{ secrets.CLI_SEC }}
-
-      # FYI: Your local dev secrets exist but are intentionally NOT used in CI:
-      # DB_URL: ${{ secrets.DB_URL }}
-      # DB_USER: ${{ secrets.DB_USER }}
-      # DB_PASS: ${{ secrets.DB_PASS }}
 
     steps:
       - name: Checkout
@@ -51,16 +42,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Seed database from SEED_SQL_B64
-        if: ${{ secrets.SEED_SQL_B64 != '' }}
+      - name: Seed database from SEED_SQL_B64 (bash guard)
         env:
           PGPASSWORD: test
           SEED_SQL_B64: ${{ secrets.SEED_SQL_B64 }}
         run: |
+          if [ -z "${SEED_SQL_B64}" ]; then
+            echo "SEED_SQL_B64 is empty. Skipping seed import."
+            exit 0
+          fi
           echo "$SEED_SQL_B64" | base64 -d > seed.sql
-          # wait for Postgres to be ready
-          for i in {1..30}; do pg_isready -h localhost -p 5432 -U test -d testdb && break || sleep 2; done
-          # import; fail fast on SQL errors
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U test -d testdb && break || sleep 2
+          done
           psql -h localhost -p 5432 -U test -d testdb -v ON_ERROR_STOP=1 -f seed.sql
 
       - name: Set up JDK 21
@@ -72,29 +66,3 @@ jobs:
 
       - name: Build and Test
         run: mvn -B -Dspring.profiles.active=ci test
-
-  docker:
-    name: Build and Push Docker Image
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GH_PAT }}
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ghcr.io/batmanayush/quiz-app-backend:${{ github.sha }}
