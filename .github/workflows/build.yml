@@ -51,11 +51,26 @@ jobs:
             echo "SEED_SQL_B64 is empty. Skipping seed import."
             exit 0
           fi
+
           echo "$SEED_SQL_B64" | base64 -d > seed.sql
+
+          # Strip PG17-only and pgAdmin junk your app doesn't need
+          sed -i -E \
+            -e '/^SET[[:space:]]+transaction_timeout[[:space:]]*=/d' \
+            -e "/SELECT pg_catalog\.set_config\('transaction_timeout',/d" \
+            -e '/^CREATE EXTENSION[[:space:]]+adminpack/d' \
+            -e '/^COMMENT ON EXTENSION[[:space:]]+adminpack/d' \
+            -e '/^ALTER EXTENSION[[:space:]]+adminpack/d' \
+            seed.sql
+
+          # Wait for DB to be ready
           for i in {1..30}; do
             pg_isready -h localhost -p 5432 -U test -d testdb && break || sleep 2
           done
+
+          # Import and fail fast on SQL errors
           psql -h localhost -p 5432 -U test -d testdb -v ON_ERROR_STOP=1 -f seed.sql
+      
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
