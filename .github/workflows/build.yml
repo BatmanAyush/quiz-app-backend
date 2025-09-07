@@ -76,3 +76,10 @@ jobs:
 
       - name: Build and Test
         run: mvn -B -Dspring.profiles.active=ci test
+
+
+      - name: Trigger Render deploy
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: curl -fsSL -X POST "$RENDER_DEPLOY_HOOK"
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
