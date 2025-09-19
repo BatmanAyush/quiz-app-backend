@@ -29,7 +29,14 @@ public class GetQuestionsController {
     @GetMapping("/{quizId}/getQuestions")
     @CrossOrigin("*")
     public List<QuizController.UserFinalQuestions>getQuestions(@PathVariable Long quizId, @AuthenticationPrincipal UserPrinciple currentUser){
-            return getQuizService.getQuestions(quizId,currentUser);
+        var a = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        System.out.println("[CTRL] quizId=" + quizId
+                + " principal=" + (a != null ? a.getName() : null)
+                + " authenticated=" + (a != null && a.isAuthenticated())
+                + " authorities=" + (a != null ? a.getAuthorities() : null)
+        );
+
+        return getQuizService.getQuestions(quizId,currentUser);
     }
 
     // In GetQuestionsController.java

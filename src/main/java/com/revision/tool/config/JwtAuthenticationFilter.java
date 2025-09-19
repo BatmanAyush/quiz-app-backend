@@ -80,9 +80,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
-                System.out.println("Auth principal=" + principal.getUsername()
-                        + ", authenticated=" + authToken.isAuthenticated()
-                        + ", authorities=" + authToken.getAuthorities());
+                var a = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                System.out.println("[JWT] principal=" + (a != null ? a.getName() : null)
+                        + " authenticated=" + (a != null && a.isAuthenticated())
+                        + " authorities=" + (a != null ? a.getAuthorities() : null));
+
             }
         }
         System.out.println(SecurityContextHolder.getContext().getAuthentication());
