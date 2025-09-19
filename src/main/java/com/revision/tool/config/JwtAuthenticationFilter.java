@@ -13,12 +13,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collections;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -70,13 +72,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             System.out.println(user);
             if (user != null && jwtService.isTokenValid(token, user)) {
                 System.out.println("Valid");
+                var authorities = Collections.<GrantedAuthority>emptyList();
                 UserPrinciple principal = new UserPrinciple(user);
                 UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(principal, null, null); // ❌ no roles
+                        new UsernamePasswordAuthenticationToken(principal, null, authorities); // ❌ no roles
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+                System.out.println("Auth principal=" + principal.getUsername()
+                        + ", authenticated=" + authToken.isAuthenticated()
+                        + ", authorities=" + authToken.getAuthorities());
             }
         }
         System.out.println(SecurityContextHolder.getContext().getAuthentication());
