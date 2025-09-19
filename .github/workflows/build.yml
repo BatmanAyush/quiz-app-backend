@@ -2,9 +2,9 @@ name: Java CI/CD with Maven and Docker
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -17,8 +17,7 @@ jobs:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
           POSTGRES_DB: testdb
-        ports:
-          - "5432:5432"
+        ports: ["5432:5432"]
         options: >-
           --health-cmd="pg_isready -U test -d testdb"
           --health-interval=5s
@@ -51,35 +50,79 @@ jobs:
             echo "SEED_SQL_B64 is empty. Skipping seed import."
             exit 0
           fi
-
           echo "$SEED_SQL_B64" | base64 -d > seed.sql
-
-          # Remove lines that break CI: adminpack extension and PG17-specific timeout
-          # This is intentionally broad so we don't miss quoted/IF NOT EXISTS variants.
-          grep -viE 'adminpack|transaction_timeout' seed.sql > seed.clean.sql
-
-          # Wait for DB to be ready
-          for i in {1..30}; do
-            pg_isready -h localhost -p 5432 -U test -d testdb && break || sleep 2
-          done
-
-          # Import and fail fast on SQL errors
+          grep -viE 'adminpack|transaction_timeout' seed.sql > seed.clean.sql || true
+          for i in {1..30}; do pg_isready -h localhost -p 5432 -U test -d testdb && break || sleep 2; done
           psql -h localhost -p 5432 -U test -d testdb -v ON_ERROR_STOP=1 -f seed.clean.sql
-      
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
           cache: maven
 
       - name: Build and Test
         run: mvn -B -Dspring.profiles.active=ci test
 
+  deploy-ec2:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: true
 
-      - name: Trigger Render deploy
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        run: curl -fsSL -X POST "$RENDER_DEPLOY_HOOK"
+    steps:
+      - name: Load SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy to EC2 (pull latest, rebuild, restart)
         env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+          REPO: https://github.com/BatmanAyush/quiz-app-backend.git
+        run: |
+          # Pass REPO into the remote session explicitly; keep heredoc single-quoted to avoid local expansion issues
+          ssh -o StrictHostKeyChecking=no "$USER@$HOST" "REPO='$REPO' bash -s" <<'EOF'
+            set -euxo pipefail
+            APP_DIR="$HOME/app"
+
+            # Ensure git and docker/compose exist
+            if ! command -v git >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y git ca-certificates curl gnupg
+            fi
+            if ! command -v docker >/dev/null 2>&1; then
+              sudo install -m 0755 -d /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+              echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+              sudo apt-get update
+              sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+              sudo usermod -aG docker "$USER" || true
+            fi
+
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+
+            # First-time clone or pull latest
+            if [ -d .git ]; then
+              git fetch --all
+              git reset --hard origin/main
+            else
+              git clone "$REPO" .
+            fi
+
+            # Require existing .env on the server
+            if [ ! -f .env ]; then
+              echo "ERROR: .env not found on server. Create ~/app/.env and rerun." >&2
+              exit 1
+            fi
+            chmod 600 .env || true
+
+            docker compose build
+            docker compose up -d
+            docker image prune -f || true
+          EOF
