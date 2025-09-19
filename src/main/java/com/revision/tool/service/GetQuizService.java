@@ -6,6 +6,7 @@ import com.revision.tool.dao.QuizRepo;
 import com.revision.tool.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,29 +30,29 @@ public class GetQuizService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<QuizController.UserFinalQuestions> getQuestions(Long quizId, UserPrinciple currentUser) {
-       List<QuizController.UserFinalQuestions>finalQuestions = new ArrayList<>();
+        var quiz = repo.findById(quizId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Quiz not found"));
 
-        Client cli = currentUser.getUser();
-       Optional<Quiz> quiz = repo.findById(quizId);
-       List<QuizQuestion> quizQuestions = quiz.get().getQuestions();
-       List<QuizController.UserFinalQuestions>userFinalQuestionsList = new ArrayList<>();
+        var questions = quiz.getQuestions(); // now inside TX, so initialized
 
-       for(int i = 0;i<quizQuestions.size();i++){
-           QuizController.UserFinalQuestions userQuestions = new QuizController.UserFinalQuestions();
-           userQuestions.setQuestionText(quizQuestions.get(i).getQuestionText());
-           List<Choice> choices = quizQuestions.get(i).getChoices();
-           List<QuizController.ChoiceDTO>choiceDTOList=new ArrayList<>();
-           for(int j = 0;j<choices.size();j++){
-               QuizController.ChoiceDTO dto = new QuizController.ChoiceDTO();
-               Choice choice = choices.get(j);
-               dto.setChoiceText(choice.getChoiceText());
-               dto.setCorrect(choice.isCorrect());
-               choiceDTOList.add(dto);
-           }
-           userQuestions.setChoices(choiceDTOList);
-           userFinalQuestionsList.add(userQuestions);
-       }
-       return userFinalQuestionsList;
+        var out = new java.util.ArrayList<QuizController.UserFinalQuestions>();
+        for (var q : questions) {
+            var dto = new QuizController.UserFinalQuestions();
+            dto.setQuestionText(q.getQuestionText());
+
+            var choiceDtos = new java.util.ArrayList<QuizController.ChoiceDTO>();
+            for (var c : q.getChoices()) {                 // this is likely LAZY too
+                var cd = new QuizController.ChoiceDTO();
+                cd.setChoiceText(c.getChoiceText());
+                cd.setCorrect(c.isCorrect());
+                choiceDtos.add(cd);
+            }
+            dto.setChoices(choiceDtos);
+            out.add(dto);
+        }
+        return out;
     }
 }
