@@ -34,7 +34,7 @@ public class UserController {
     @CrossOrigin("*")
     @GetMapping("/test")
     public String test(){
-            return "Working Successfully!";
+            return "Actions Reflected Sucessfully";
     }
 
     @PostMapping("/sign")
