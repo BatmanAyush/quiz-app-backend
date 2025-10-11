@@ -45,24 +45,30 @@ public class UserController {
 
     @CrossOrigin("*")
     @PostMapping("/login")
-    public ClientToken login(@RequestBody Client loginRequest) { // Renamed method and parameter
-        // This line handles authentication. It will throw an exception on failure.
+    public ClientToken login(@RequestBody Client loginRequest) {
         System.out.println("Enter Login Controller");
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getName(), loginRequest.getPassword())
-        );
+        System.out.println("Attempting login for user: " + loginRequest.getName());
 
-        // If we reach here, authentication was successful.
-        System.out.println("just after authentication");
-        UserPrinciple userPrinciple = (UserPrinciple) authentication.getPrincipal();
-        Client authenticatedUser = userPrinciple.getUser();
-        System.out.println("i am here");
-        String token = jwtService.generateToken(authenticatedUser);
-        System.out.println("jwt service done");
-        System.out.println(loginRequest.getPassword());
-        System.out.println(token);
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getName(), loginRequest.getPassword())
+            );
 
-        return new ClientToken(token);
+            System.out.println("✅ Authentication successful!");
+            UserPrinciple userPrinciple = (UserPrinciple) authentication.getPrincipal();
+            Client authenticatedUser = userPrinciple.getUser();
+            String token = jwtService.generateToken(authenticatedUser);
+
+            System.out.println("✅ Token generated: " + token);
+            return new ClientToken(token);
+
+        } catch (Exception e) {
+            System.out.println("❌ Authentication failed!");
+            System.out.println("❌ Error type: " + e.getClass().getName());
+            System.out.println("❌ Error message: " + e.getMessage());
+            e.printStackTrace();
+            throw e; // Re-throw to let Spring Security handle it
+        }
     }
     @CrossOrigin("*")
     @PostMapping("/checkToken")
