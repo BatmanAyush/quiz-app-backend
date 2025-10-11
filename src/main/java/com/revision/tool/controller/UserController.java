@@ -53,6 +53,7 @@ public class UserController {
         );
 
         // If we reach here, authentication was successful.
+        System.out.println("just after authentication");
         UserPrinciple userPrinciple = (UserPrinciple) authentication.getPrincipal();
         Client authenticatedUser = userPrinciple.getUser();
         System.out.println("i am here");
