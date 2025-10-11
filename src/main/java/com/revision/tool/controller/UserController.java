@@ -56,6 +56,8 @@ public class UserController {
         UserPrinciple userPrinciple = (UserPrinciple) authentication.getPrincipal();
         Client authenticatedUser = userPrinciple.getUser(); // This is the Client object from the DB with the correct ID
         String token = jwtService.generateToken(authenticatedUser);
+        System.out.println(loginRequest.getPassword());
+        System.out.println(token);
 
         return new ClientToken(token);
     }
