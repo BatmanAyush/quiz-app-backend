@@ -54,8 +54,10 @@ public class UserController {
 
         // If we reach here, authentication was successful.
         UserPrinciple userPrinciple = (UserPrinciple) authentication.getPrincipal();
-        Client authenticatedUser = userPrinciple.getUser(); // This is the Client object from the DB with the correct ID
+        Client authenticatedUser = userPrinciple.getUser();
+        System.out.println("i am here");
         String token = jwtService.generateToken(authenticatedUser);
+        System.out.println("jwt service done");
         System.out.println(loginRequest.getPassword());
         System.out.println(token);
 
