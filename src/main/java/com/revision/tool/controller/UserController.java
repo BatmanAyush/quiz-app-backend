@@ -48,6 +48,7 @@ public class UserController {
     public ClientToken login(@RequestBody Client loginRequest) {
         System.out.println("Enter Login Controller");
         System.out.println("Attempting login for user: " + loginRequest.getName());
+        System.out.println("password:" + loginRequest.getPassword());
 
         try {
             Authentication authentication = authenticationManager.authenticate(
