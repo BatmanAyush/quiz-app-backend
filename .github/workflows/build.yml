@@ -1,7 +1,7 @@
 name: Build and Push to ECR for Elastic Beanstalk
 on:
   push:
-    branches: ["ecs-migration"]
+    branches: ["aws-exp"]
 
 permissions:
   id-token: write
